@@ -10,31 +10,30 @@ admin.initializeApp({
 });
 
 
-function sendMessage(token, task) {
-  var content = {
-    title: task.name,
-    body: 'This task is due'
-  }
+function parseDate(date) {
+  return moment.utc(date).format();
+}
 
+
+function sendMessage(data) {
+  data = JSON.parse(data);
+
+  var UTCdate = parseDate(data.date);
   var message = {
-    notification: content,
-    data: content,
+    data: {
+
+    },
     token: token
   }
 
   admin.messaging().send(message)
-    .then(function () {
-      console.log('success message id: ');
-    })
-    .catch(function (err) {
-      console.log('error sending msg', err);
-    })
 }
+
 
 /* POST sent task */
 router.post('/', function (req, res, next) {
   console.log(req.body);
-  sendMessage(req.body.fcmToken, req.body.task);
+  sendMessage(token);
 });
 
 module.exports = router;
