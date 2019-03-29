@@ -9,30 +9,25 @@
   <h1>Express</h1>
   <p>Welcome to Express</p>
 
+  <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
   <script src="https://unpkg.com/compromise@latest/builds/compromise.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/moment@2.24.0/moment.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.23/moment-timezone.min.js"></script>
+  <script src="https://momentjs.com/downloads/moment-timezone-with-data-2012-2022.js"></script>
   <script>
-    // TODO: put a checker for named dates like 'today', 'tomorrow', 'this weekend', 'christmas', etc.
-    var task = 'do homework this sunday at 9pm';
-    var nlpDate = nlp(task).dates().data();
-    console.log(nlpDate);
-    // console.log(new Date());
-    // console.log(moment().day(2).format())
-    console.log(moment.utc(new Date()).format())
-    var today = moment().isoWeekday();
-    var dayINeed = nlpDate[0].date.weekday; // tuesday
-
-    function getNextWeekday(today, dayIneed) {
-      if (today <= dayINeed) {
-        // then just give me this week's instance of that day
-        return moment().isoWeekday(dayINeed);
-      } else {
-        // otherwise, give me *next week's* instance of that same day
-        return moment().add(1, 'weeks').isoWeekday(dayINeed);
-      }
+    var data = {
+      task: 'do homework next wednesday at 9pm',
+      today: moment().isoWeekday(),
+      timezone: moment.tz.guess(true)
     }
 
-    console.log(getNextWeekday(today, dayINeed))
+    function sendToServer(data) {
+      var JSON_data = JSON.stringify(data);
+      var url = 'http://localhost:3000/';
+      $.post(url, data);
+    }
+
+    sendToServer(data);
   </script>
 </body>
 
