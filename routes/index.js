@@ -5,8 +5,17 @@ var serviceAccount = require("../serviceAccountKey.json");
 var nlp = require('compromise');
 var moment = require('moment');
 var schedule = require('node-schedule');
+var hash = require('object-hash');
+var XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
+var scheduledJobs = {}
 
+function cancelJob(name) {
+  var taskHash = hash(name);
+  var scheduler = schedule.scheduledJobs[taskHash];
+  scheduler.cancel();
+}
 
+// get task name
 var smartProcessing = {
   mount: function () {
     this.initFirebase();
@@ -19,7 +28,8 @@ var smartProcessing = {
   },
   processTask: function (task, timezone, today) {
     var dateDue = this.processDate(task, timezone, today);
-    console.log(dateDue.format());
+    console.log(dateDue.day.format());
+    // if (dateDue.notify) this.scheduleTask(dateDue.day, task);
   },
   processDate: function (task, timezone, today) {
     var NLPDate = this.getNLPDate(task)
@@ -79,13 +89,17 @@ var smartProcessing = {
   processHoursAndMinutes: function (momentDay, NLPDate) {
     var dateCalendar = NLPDate[0].date;
     var time = NLPDate[0].date.time;
+    var notifyYesOrNo = false;
 
     if (dateCalendar.year !== null) momentDay.year(dateCalendar.year);
     if (dateCalendar.month !== null) momentDay.month(dateCalendar.month);
     if (dateCalendar.date !== null) momentDay.date(dateCalendar.date);
 
     if (time !== null) {
-      if (time.hour !== null) momentDay.hour(time.hour);
+      if (time.hour !== null) {
+        notifyYesOrNo = true;
+        momentDay.hour(time.hour);
+      }
 
       if (time.minute !== null) {
         momentDay.minute(time.minute);
@@ -101,53 +115,65 @@ var smartProcessing = {
 
     }
 
-    return momentDay;
+    return {
+      day: momentDay,
+      notify: notifyYesOrNo
+    };
   },
   getNLPDate: function (taskName) {
     var NLPDate = nlp(taskName).dates().data();
     return NLPDate;
   },
-  scheduleTask: function (dateDue) {
+  scheduleTask: function (dateDue, taskName) {
+    var taskHash = hash(taskName);
     var getThatScheduled = dateDue.toDate();
-    var doItBrother = schedule.scheduleJob(getThatScheduled, () => {
-      console.log('You did it Abdul! You did it')
+
+    schedule.scheduleJob(taskHash, getThatScheduled, () => {
+      var message = {
+        data: {
+          title: taskName,
+          body: 'This task is due'
+        },
+        token: token
+      }
+
+      admin.messaging().send(message)
     });
   }
 }
 
+// 42.3601,-71.0589
+
+var processWeather = {
+  apiKey: '23ad00a63f02fa425fea6b4346f80809',
+  getWeather: function (coordinates) {
+    var forecastURL = 'https://api.darksky.net/forecast/';
+    forecastURL += this.apiKey + '/';
+    forecastURL += coordinates + '?';
+    forecastURL += 'exclude=[alerts,flags]';
+
+    // this.fetchApi(forecastURL, this.printResponse);
+
+  },
+  fetchApi: function httpGetAsync(theUrl, callback) {
+    var xmlHttp = new XMLHttpRequest();
+    xmlHttp.onreadystatechange = function () {
+      if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
+        callback(xmlHttp.responseText);
+    }
+    xmlHttp.open("GET", theUrl, true); // true for asynchronous 
+    xmlHttp.send(null);
+  },
+  printResponse: function (callback) {
+    console.log(callback);
+  }
+}
+
+processWeather.getWeather('42.3601,-71.0589');
+
 // init
 smartProcessing.mount()
 
-
-// function parseDate(date) {
-//   return moment.utc(date).format();
-// }
-
-
-// function getNextWeekday(today, dayIneed) {
-
-// }
-
-// function sendMessage(data) {
-//   data = JSON.parse(data);
-
-//   var UTCdate = parseDate(data.date);
-//   var message = {
-//     data: {
-
-//     },
-//     token: token
-//   }
-
-//   admin.messaging().send(message)
-// }
-
-
-// function processTask(task) {
-//   var date = processDate(task);
-// }
-
-// TODO: put a checker for named dates like 'today', 'tomorrow', 'this weekend', 'christmas', etc.
 
 
 /* POST sent task */
@@ -156,6 +182,15 @@ router.post('/', function (req, res, next) {
   var timezone = req.body.timezone;
   var today = parseInt(req.body.today);
   smartProcessing.processTask(task, timezone, today);
+});
+
+router.post('/weather', function (req, res, next) {
+
+});
+
+router.post('/cancel', function (req, res, next) {
+  var taskName = req.body.tasName;
+  cancelJob(taskName);
 });
 
 
