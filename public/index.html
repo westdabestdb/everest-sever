@@ -16,10 +16,15 @@
   <script src="https://momentjs.com/downloads/moment-timezone-with-data-2012-2022.js"></script>
   <script>
     var data = {
-      task: 'do homework next wednesday at 9pm',
+      task: 'do homework this monday at 9pm',
       today: moment().isoWeekday(),
       timezone: moment.tz.guess(true)
     }
+
+
+    var nlpDate = nlp(data.task).dates().data();
+    console.log(nlpDate)
+
 
     function sendToServer(data) {
       var JSON_data = JSON.stringify(data);
