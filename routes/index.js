@@ -1,12 +1,14 @@
 var express = require('express');
 var router = express.Router();
-var admin = require("firebase-admin");
-var serviceAccount = require("../serviceAccountKey.json");
+var admin = require('firebase-admin');
+var serviceAccount = require('../serviceAccountKey.json');
 var nlp = require('compromise');
 var moment = require('moment');
 var schedule = require('node-schedule');
 var hash = require('object-hash');
-var XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
+var XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest;
+var _ = require('lodash');
+var deepFilter = require('deep-filter-object');
 var scheduledJobs = {}
 
 function cancelJob(name) {
@@ -23,13 +25,13 @@ var smartProcessing = {
   initFirebase: function () {
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
-      databaseURL: "https://nomail-f7abe.firebaseio.com"
+      databaseURL: 'https://nomail-f7abe.firebaseio.com'
     });
   },
-  processTask: function (task, timezone, today) {
+  processTask: function (task, timezone, today, token) {
     var dateDue = this.processDate(task, timezone, today);
     console.log(dateDue.day.format());
-    // if (dateDue.notify) this.scheduleTask(dateDue.day, task);
+    if (dateDue.notify) this.scheduleTask(dateDue.day, task, token);
   },
   processDate: function (task, timezone, today) {
     var NLPDate = this.getNLPDate(task)
@@ -48,6 +50,9 @@ var smartProcessing = {
       case (month !== null || date !== null):
         console.log('month or date')
         return this.processWithMonthOrDate(timezone, NLPDate);
+      case (time.hour !== null):
+        var timeHourMoment = moment.tz(timezone);
+        return this.processHoursAndMinutes(timeHourMoment, NLPDate);
       default:
         console.error('An error ocurred figuring out which type of date task this is');
         break;
@@ -124,9 +129,11 @@ var smartProcessing = {
     var NLPDate = nlp(taskName).dates().data();
     return NLPDate;
   },
-  scheduleTask: function (dateDue, taskName) {
+  scheduleTask: function (dateDue, taskName, token) {
     var taskHash = hash(taskName);
     var getThatScheduled = dateDue.toDate();
+
+    console.log('scheduled')
 
     schedule.scheduleJob(taskHash, getThatScheduled, () => {
       var message = {
@@ -134,38 +141,60 @@ var smartProcessing = {
           title: taskName,
           body: 'This task is due'
         },
+        notification: {
+          title: taskName,
+          body: 'This task is due'
+        },
         token: token
       }
 
       admin.messaging().send(message)
+        .then((response) => {
+          // Response is a message ID string.
+          console.log('Successfully sent message:', response);
+        })
+        .catch((error) => {
+          console.log('Error sending message:', error);
+        });
     });
   }
 }
 
 // 42.3601,-71.0589
 
+var fetchApi = function httpGetAsync(theUrl, callback, weather) {
+  var xmlHttp = new XMLHttpRequest();
+  var output;
+  xmlHttp.onreadystatechange = function () {
+    if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
+      return output = xmlHttp.responseText
+    // this.returnWeather(weather);
+  }
+  xmlHttp.open('GET', theUrl, false); // true for asynchronous 
+  xmlHttp.send(null);
+  return output;
+};
+
 var processWeather = {
-  apiKey: '23ad00a63f02fa425fea6b4346f80809',
-  getWeather: function (coordinates) {
+  // apiKey: '23ad00a63f02fa425fea6b4346f80809',
+  getWeather: function (coordinates, weather) {
+    var apiKey = '23ad00a63f02fa425fea6b4346f80809'
     var forecastURL = 'https://api.darksky.net/forecast/';
-    forecastURL += this.apiKey + '/';
+    forecastURL += apiKey + '/';
     forecastURL += coordinates + '?';
     forecastURL += 'exclude=[alerts,flags]';
 
-    // this.fetchApi(forecastURL, this.printResponse);
-
+    var weatherForecast = fetchApi(forecastURL, this.printResponse, weather);
+    this.printResponse(weatherForecast, weather)
+    // this.findMatch({ a: 1 }, 1)
   },
-  fetchApi: function httpGetAsync(theUrl, callback) {
-    var xmlHttp = new XMLHttpRequest();
-    xmlHttp.onreadystatechange = function () {
-      if (xmlHttp.readyState == 4 && xmlHttp.status == 200)
-        callback(xmlHttp.responseText);
+  printResponse: function (callback, weather) {
+    switch (true) {
+      case (weather == 'rain' || weather == 'rains' || weather == 'raining'):
+        console.log(callback)
+        console.log(deepFilter(callback, 'clear-day'));
+        break;
     }
-    xmlHttp.open("GET", theUrl, true); // true for asynchronous 
-    xmlHttp.send(null);
-  },
-  printResponse: function (callback) {
-    console.log(callback);
   }
 }
 
@@ -181,11 +210,30 @@ router.post('/', function (req, res, next) {
   var task = req.body.task;
   var timezone = req.body.timezone;
   var today = parseInt(req.body.today);
-  smartProcessing.processTask(task, timezone, today);
+  var token = req.body.fcmToken;
+  smartProcessing.processTask(task, timezone, today, token);
 });
 
 router.post('/weather', function (req, res, next) {
-
+  var task = req.body.task;
+  // Get weather
+  const weatherLookups = [
+    '/rai[n|ns|ing]/',
+    '/sunny/',
+    '/thunderstor[m|ms]/',
+    '/drizzl[e|es|ing]/',
+    '/sno[w|ws|ing]/',
+    '/clear/',
+    '/cloud[y]/'
+  ];
+  for (var index = 0; index < weatherLookups.length; index++) {
+    const weather = nlp(task).match(weatherLookups[index]).out('array');
+    if (weather.length) {
+      processWeather.getWeather('42.3601,-71.0589', weather);
+      // console.log(weather)
+      break;
+    }
+  }
 });
 
 router.post('/cancel', function (req, res, next) {

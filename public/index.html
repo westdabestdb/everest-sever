@@ -16,7 +16,7 @@
   <script src="https://momentjs.com/downloads/moment-timezone-with-data-2012-2022.js"></script>
   <script>
     var data = {
-      task: 'do homework tomorrow at 5pm',
+      task: 'do homework if it rains',
       today: moment().isoWeekday(),
       timezone: moment.tz.guess(true)
     }
@@ -28,7 +28,7 @@
 
     function sendToServer(data) {
       var JSON_data = JSON.stringify(data);
-      var url = 'http://localhost:3000/';
+      var url = 'http://localhost:3000/weather';
       $.post(url, data);
     }
 
