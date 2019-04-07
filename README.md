@@ -16,3 +16,9 @@ But generally this is how it would work:
 3. A scheduled message is created
 
 This project is under the GNU GPLv3 license.
+
+
+# Thanks
+Thanks to the following people for helping:
+
+Abdul Diaz (@diazabdulm)
