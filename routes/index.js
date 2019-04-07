@@ -7,9 +7,16 @@ var moment = require('moment');
 var schedule = require('node-schedule');
 var hash = require('object-hash');
 var XMLHttpRequest = require('xmlhttprequest').XMLHttpRequest;
-var _ = require('lodash');
 var deepFilter = require('deep-filter-object');
-var scheduledJobs = {}
+
+/*
+
+This is where the task name is received,
+and where all the scheduling logic is held.
+
+It's messy I know
+
+*/
 
 function cancelJob(name) {
   var taskHash = hash(name);
