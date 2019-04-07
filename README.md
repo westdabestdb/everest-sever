@@ -14,3 +14,5 @@ But generally this is how it would work:
 1. Server Receives Post Request (file is called index.js in 'routes' folder)
 2. Server Processes the exact date and time to complete task
 3. A scheduled message is created
+
+This project is under the GPL license.
