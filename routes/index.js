@@ -148,7 +148,11 @@ var smartProcessing = {
           title: taskName,
           body: 'This task is due'
         },
-        token: token
+        android: {
+          priority: 'high'
+        },
+        token: token,
+        ttl: '0s'
       }
 
       admin.messaging().send(message)
