@@ -15,4 +15,4 @@ But generally this is how it would work:
 2. Server Processes the exact date and time to complete task
 3. A scheduled message is created
 
-This project is under the GPL license.
+This project is under the GNU GPLv3 license.
