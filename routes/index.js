@@ -96,6 +96,8 @@ var smartProcessing = {
     var time = NLPDate[0].date.time;
     var notifyYesOrNo = false;
 
+    console.log(time);
+
     if (dateCalendar.year !== null) momentDay.year(dateCalendar.year);
     if (dateCalendar.month !== null) momentDay.month(dateCalendar.month);
     if (dateCalendar.date !== null) momentDay.date(dateCalendar.date);
@@ -134,6 +136,7 @@ var smartProcessing = {
     var getThatScheduled = dateDue.toDate();
 
     console.log('scheduled')
+    console.log(token);
 
     schedule.scheduleJob(taskHash, getThatScheduled, () => {
       var message = {
@@ -207,6 +210,9 @@ smartProcessing.mount()
 
 /* POST sent task */
 router.post('/', function (req, res, next) {
+
+  console.log(req.body.task);
+
   var task = req.body.task;
   var timezone = req.body.timezone;
   var today = parseInt(req.body.today);
